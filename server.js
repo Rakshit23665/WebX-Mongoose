@@ -11,12 +11,17 @@ mongoose.connect('mongodb://127.0.0.1:27017/school')
   .then(() => console.log('Connected to MongoDB'))
   .catch(err => console.log(err));
 
-
 // Mongoose Schema & Model
 const studentSchema = new mongoose.Schema({
+  studentId: { type: Number, required: true, unique: true },
   name: { type: String, required: true },
   age: { type: Number, required: true },
-  grade: { type: String, required: true }
+  grade: { 
+    type: String, 
+    required: true, 
+    enum: ["A+", "A", "B", "C", "D"], // Enum Validation
+    uppercase: true // Ensures input is uppercase
+  }
 });
 
 const Student = mongoose.model('Student', studentSchema);
@@ -32,10 +37,10 @@ app.get('/students', async (req, res) => {
   }
 });
 
-// Retrieve student by ID
-app.get('/students/:id', async (req, res) => {
+// Retrieve student by studentId
+app.get('/students/:studentId', async (req, res) => {
   try {
-    const student = await Student.findById(req.params.id);
+    const student = await Student.findOne({ studentId: parseInt(req.params.studentId) });
     if (!student) return res.status(404).json({ message: 'Student not found' });
     res.status(200).json(student);
   } catch (err) {
@@ -46,7 +51,8 @@ app.get('/students/:id', async (req, res) => {
 // Add a new student
 app.post('/students', async (req, res) => {
   try {
-    const student = new Student(req.body);
+    const { studentId, name, age, grade } = req.body;
+    const student = new Student({ studentId, name, age, grade });
     await student.save();
     res.status(201).json(student);
   } catch (err) {
@@ -54,10 +60,14 @@ app.post('/students', async (req, res) => {
   }
 });
 
-// Update student by ID
-app.put('/students/:id', async (req, res) => {
+// Update student by studentId
+app.put('/students/:studentId', async (req, res) => {
   try {
-    const student = await Student.findByIdAndUpdate(req.params.id, req.body, { new: true, runValidators: true });
+    const student = await Student.findOneAndUpdate(
+      { studentId: parseInt(req.params.studentId) },
+      req.body,
+      { new: true, runValidators: true }
+    );
     if (!student) return res.status(404).json({ message: 'Student not found' });
     res.status(200).json(student);
   } catch (err) {
@@ -65,10 +75,10 @@ app.put('/students/:id', async (req, res) => {
   }
 });
 
-// Delete student by ID
-app.delete('/students/:id', async (req, res) => {
+// Delete student by studentId
+app.delete('/students/:studentId', async (req, res) => {
   try {
-    const student = await Student.findByIdAndDelete(req.params.id);
+    const student = await Student.findOneAndDelete({ studentId: parseInt(req.params.studentId) });
     if (!student) return res.status(404).json({ message: 'Student not found' });
     res.status(200).json({ message: 'Student deleted' });
   } catch (err) {
